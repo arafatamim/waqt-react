@@ -1,6 +1,7 @@
 import React from 'react';
 import './App.scss';
 import Headerbox from './Headerbox';
+import Settings from './Settings';
 import axios from 'axios';
 import moment from 'moment';
 import adhan from 'adhan';
@@ -18,56 +19,62 @@ export default class App extends React.Component {
             timeFormat: 'h:mm A',
             timeToNextWaqt: null,
             nextWaqt: null,
-            latitude: null,
-            longitude: null
+            settingsDialog: false,
+            localTime: null,
+            timeZone: null
         };
     }
 
     componentDidMount() {
-        this.getTimes();
+        setInterval(this.getLocation(), 600000);
     }
     getLocation() {
+        var coords = {};
         navigator.geolocation.getCurrentPosition(
             location => {
-                this.setState({ latitude: location.coords.latitude });
-                this.setState({ longitude: location.coords.longitude });
+                coords.lat = location.coords.latitude.toFixed(4);
+                coords.lon = location.coords.longitude.toFixed(4);
+                this.getTimes(coords);
             },
             err => {
-                console.log(err);
+                console.error(err);
                 console.log('Fallback to IP geolocation');
                 axios
-                    .get('https://ip-api.io/json/')
+                    .get('http://ip-api.com/json/')
                     .then(response => {
-                        this.setState({ latitude: response.data.lat });
-                        this.setState({ longitude: response.data.lon });
+                        coords.lat = response.data.lat.toFixed(4);
+                        coords.lon = response.data.lon.toFixed(4);
+                        this.getTimes(coords);
                     })
                     .catch(error => {
-                        console.log(error);
+                        console.error(error);
                     });
             }
         );
+
+        return coords;
     }
-    getTimes() {
-        this.getLocation();
+    getTimes(coords) {
         var date = new Date();
-        var coordinates = new adhan.Coordinates(this.state.latitude, this.state.longitude);
+        var coordinates = new adhan.Coordinates(coords.lat, coords.lon);
         var params = adhan.CalculationMethod.Karachi();
         params.madhab = adhan.Madhab.Hanafi;
+        params.highLatitudeRule = adhan.HighLatitudeRule.TwilightAngle;
         var prayerTimes = new adhan.PrayerTimes(coordinates, date, params);
         var formattedTime = adhan.Date.formattedTime;
-        // let UTCOffset = moment
-        //     .duration(
-        //         moment()
-        //             .parseZone()
-        //             .format('Z')
-        //     )
-        //     .asHours();
-        var milFajr = formattedTime(prayerTimes.fajr, 0, '24h');
-        var milSunrise = formattedTime(prayerTimes.sunrise, 0, '24h');
-        var milDhuhr = formattedTime(prayerTimes.dhuhr, 0, '24h');
-        var milAsr = formattedTime(prayerTimes.asr, 0, '24h');
-        var milMaghrib = formattedTime(prayerTimes.maghrib, 0, '24h');
-        var milIsha = formattedTime(prayerTimes.isha, 0, '24h');
+        let UTCOffset = moment
+            .duration(
+                moment()
+                    .parseZone()
+                    .format('Z')
+            )
+            .asHours();
+        var milFajr = formattedTime(prayerTimes.fajr, UTCOffset, '24h');
+        var milSunrise = formattedTime(prayerTimes.sunrise, UTCOffset, '24h');
+        var milDhuhr = formattedTime(prayerTimes.dhuhr, UTCOffset, '24h');
+        var milAsr = formattedTime(prayerTimes.asr, UTCOffset, '24h');
+        var milMaghrib = formattedTime(prayerTimes.maghrib, UTCOffset, '24h');
+        var milIsha = formattedTime(prayerTimes.isha, UTCOffset, '24h');
 
         this.setState({ fajr: moment(milFajr, 'HH:mm').format(this.state.timeFormat) });
         this.setState({ sunrise: moment(milSunrise, 'HH:mm').format(this.state.timeFormat) });
@@ -81,6 +88,14 @@ export default class App extends React.Component {
         //     moment()
         //         .parseZone()
         //         .format('Z');
+        this.setState({ localTime: moment().format('MMMM Do YYYY') });
+        this.setState({
+            timeZone:
+                'GMT' +
+                moment()
+                    .parseZone()
+                    .format('Z')
+        });
 
         let unixNow = moment().unix();
 
@@ -114,6 +129,9 @@ export default class App extends React.Component {
     render() {
         return (
             <div id="bossContainer">
+                {this.state.settingsDialog && (
+                    <Settings localtime={this.state.localTime} timezone={this.state.timeZone} />
+                )}
                 <div id="secondBossContainer">
                     <Headerbox />
                     <div className="contentBoxes">
