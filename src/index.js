@@ -3,10 +3,11 @@ import ReactDOM from 'react-dom';
 import './index.scss';
 import App from './App';
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { faCog } from '@fortawesome/free-solid-svg-icons';
+import { faCog, faSave, faTimesCircle, faRedo } from '@fortawesome/free-solid-svg-icons';
+import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import * as serviceWorker from './serviceWorker';
 
-library.add(faCog);
+library.add(faCog, faSave, faGithub, faTimesCircle, faRedo);
 
 ReactDOM.render(<App />, document.getElementById('root'));
 
