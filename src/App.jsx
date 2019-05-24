@@ -1,13 +1,47 @@
 import React from 'react';
-import './App.scss';
-import Headerbox from './Headerbox';
-import Settings from './Settings';
-import Snackbar from './Snackbar';
+import Headerbox from './components/Headerbox';
+import Settings from './components/Settings';
+import Snackbar from './components/Snackbar';
+import TimeBox from './components/TimeBox';
+import styled, { createGlobalStyle } from 'styled-components';
 import axios from 'axios';
 import moment from 'moment';
 import adhan from 'adhan';
 
-export default class App extends React.Component {
+const GlobalStyle = createGlobalStyle`
+  body {
+    background-color: ${props =>
+      props.theme.dark ? props.theme.background.dark : props.theme.background.light};
+      user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  }
+`;
+const TimeBoxContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 33.3%);
+  grid-template-rows: repeat(2, 220px);
+
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, 50%);
+    grid-template-rows: repeat(3, 220px);
+  }
+  @media (max-width: 575px) {
+    grid-template-columns: 100%;
+    grid-template-rows: repeat(6, 220px);
+  }
+`;
+const BossContainer = styled.div`
+  @media (min-width: 825px) {
+    padding: 3% 5%;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+  }
+`;
+
+class App extends React.Component {
   state = {
     fajr: '...',
     sunrise: '...',
@@ -21,13 +55,68 @@ export default class App extends React.Component {
     settingsDialog: false,
     localTime: null,
     timeZone: null,
-    snackbar: true
+    snackbar: false,
+    theme: {
+      dark: false,
+      foreground: {
+        dark: '#333',
+        light: '#eee'
+      },
+      background: {
+        light: '#eee',
+        dark: '#222'
+      }
+    }
   };
+
+  render() {
+    return (
+      <div>
+        <GlobalStyle theme={this.state.theme} />
+        {this.state.settingsDialog && (
+          <Settings
+            localtime={this.state.localTime}
+            timezone={this.state.timeZone}
+            tformat={this.state.timeFormat}
+            appTheme={this.state.theme.dark ? 'dark' : 'light'}
+            toggleDialog={this.toggleDialog}
+            updateFormat={this.updateFormat}
+            updateTheme={this.updateTheme}
+            theme={this.state.theme}
+          />
+        )}
+        <BossContainer>
+          <Headerbox toggleDialog={this.toggleDialog} theme={this.state.theme} />
+          <TimeBoxContainer>
+            {['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((val, i) => (
+              <TimeBox
+                waqtName={val}
+                waqtTime={this.state[val.toLowerCase()]}
+                timeToNextWaqt={this.state.timeToNextWaqt}
+                activeWaqt={this.state.nextWaqt === val.toLowerCase()}
+                key={`waqt-${i}`}
+              />
+            ))}
+          </TimeBoxContainer>
+          {this.state.snackbar && <Snackbar reloadTimes={this.reloadTimes} />}
+        </BossContainer>
+      </div>
+    );
+  }
   componentDidMount() {
     if (localStorage.getItem('timeFormat') != null) {
       this.setState({ timeFormat: localStorage.getItem('timeFormat') });
     } else {
       this.setState({ timeFormat: 'h:mm A' });
+    }
+    if (localStorage.getItem('appTheme') != null) {
+      var theme = { ...this.state.theme };
+      if (localStorage.getItem('appTheme') === 'light') {
+        theme.dark = false;
+      } else {
+        theme.dark = true;
+      }
+      this.setState({ theme });
     }
     setInterval(this.getLocation(), 600000);
   }
@@ -44,6 +133,18 @@ export default class App extends React.Component {
     localStorage.setItem('timeFormat', val);
     this.toggleDialog();
     this.getLocation();
+  };
+  updateTheme = val => {
+    var theme = { ...this.state.theme };
+    if (val === 'light') {
+      theme.dark = false;
+    } else {
+      theme.dark = true;
+    }
+    this.setState({ theme });
+    localStorage.setItem('appTheme', val);
+    this.toggleDialog();
+    window.location.reload();
   };
   reloadTimes = () => {
     this.setState({
@@ -109,12 +210,7 @@ export default class App extends React.Component {
     this.setState({ asr: moment(milAsr, 'HH:mm').format(this.state.timeFormat) });
     this.setState({ maghrib: moment(milMaghrib, 'HH:mm').format(this.state.timeFormat) });
     this.setState({ isha: moment(milIsha, 'HH:mm').format(this.state.timeFormat) });
-    // this.localTime = moment().format('MMMM Do YYYY');
-    // this.timezone =
-    //     'GMT' +
-    //     moment()
-    //         .parseZone()
-    //         .format('Z');
+
     this.setState({ localTime: moment().format('MMMM Do YYYY') });
     this.setState({
       timeZone:
@@ -153,107 +249,6 @@ export default class App extends React.Component {
       this.setState({ timeToNextWaqt: moment.unix(unixIsha).fromNow() });
     }
   }
-  render() {
-    return (
-      <div id="bossContainer">
-        {this.state.settingsDialog && (
-          <Settings
-            localtime={this.state.localTime}
-            timezone={this.state.timeZone}
-            tformat={this.state.timeFormat}
-            toggleDialog={this.toggleDialog}
-            updateFormat={this.updateFormat}
-          />
-        )}
-        <div id="secondBossContainer">
-          <Headerbox toggleDialog={this.toggleDialog} />
-          <div className="contentBoxes">
-            <div className={'contentBox ' + (this.state.nextWaqt === 'fajr' ? 'active' : null)}>
-              <div className="divWaqt" id="divWaqt1">
-                <div className="waqtName">
-                  Fajr
-                  {this.state.nextWaqt === 'fajr' && (
-                    <span className="nextWaqtTime">{this.state.timeToNextWaqt}</span>
-                  )}
-                </div>
-                <div className="waqtTime" id="waqtTime1">
-                  {this.state.fajr}
-                </div>
-              </div>
-            </div>
-            <div className={'contentBox ' + (this.state.nextWaqt === 'sunrise' ? 'active' : null)}>
-              <div className="divWaqt" id="divWaqt2">
-                <div className="waqtName">
-                  Sunrise
-                  {this.state.nextWaqt === 'sunrise' && (
-                    <span className="nextWaqtTime">{this.state.timeToNextWaqt}</span>
-                  )}
-                </div>
-                <div className="waqtTime" id="waqtTime2">
-                  {this.state.sunrise}
-                </div>
-              </div>
-            </div>
-
-            <div className={'contentBox ' + (this.state.nextWaqt === 'dhuhr' ? 'active' : null)}>
-              <div className="divWaqt" id="divWaqt3">
-                <div className="waqtName">
-                  Dhuhr
-                  {this.state.nextWaqt === 'dhuhr' && (
-                    <span className="nextWaqtTime">{this.state.timeToNextWaqt}</span>
-                  )}
-                </div>
-                <div className="waqtTime" id="waqtTime3">
-                  {this.state.dhuhr}
-                </div>
-              </div>
-            </div>
-
-            <div className={'contentBox ' + (this.state.nextWaqt === 'asr' ? 'active' : null)}>
-              <div className="divWaqt" id="divWaqt4">
-                <div className="waqtName">
-                  Asr
-                  {this.state.nextWaqt === 'asr' && (
-                    <span className="nextWaqtTime">{this.state.timeToNextWaqt}</span>
-                  )}
-                </div>
-                <div className="waqtTime" id="waqtTime4">
-                  {this.state.asr}
-                </div>
-              </div>
-            </div>
-
-            <div className={'contentBox ' + (this.state.nextWaqt === 'maghrib' ? 'active' : null)}>
-              <div className="divWaqt" id="divWaqt5">
-                <div className="waqtName">
-                  Maghrib
-                  {this.state.nextWaqt === 'maghrib' && (
-                    <span className="nextWaqtTime">{this.state.timeToNextWaqt}</span>
-                  )}
-                </div>
-                <div className="waqtTime" id="waqtTime5">
-                  {this.state.maghrib}
-                </div>
-              </div>
-            </div>
-
-            <div className={'contentBox ' + (this.state.nextWaqt === 'isha' ? 'active' : null)}>
-              <div className="divWaqt" id="divWaqt6">
-                <div className="waqtName">
-                  Isha
-                  {this.state.nextWaqt === 'isha' && (
-                    <span className="nextWaqtTime">{this.state.timeToNextWaqt}</span>
-                  )}
-                </div>
-                <div className="waqtTime" id="waqtTime6">
-                  {this.state.isha}
-                </div>
-              </div>
-            </div>
-          </div>
-          {this.state.snackbar && <Snackbar reloadTimes={this.reloadTimes} />}
-        </div>
-      </div>
-    );
-  }
 }
+
+export default App;
