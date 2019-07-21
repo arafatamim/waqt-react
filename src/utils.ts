@@ -1,5 +1,5 @@
-import * as adhan from 'adhan';
-import moment from 'moment';
+import * as adhan from "adhan";
+import moment from "moment";
 
 export type Coordinates = {
   latitude: number;
@@ -14,8 +14,26 @@ export interface PrayerTimes {
   maghrib: string;
   isha: string;
 }
-
+/** Uses HTML5 geolocation if present, else IP geolocation, which may not be accurate */
 export const getLocation = () => {
+  const getIPLocation = (
+    resolve: (value?: Coordinates | PromiseLike<Coordinates> | undefined) => void,
+    reject: (reason?: any) => void
+  ) => {
+    fetch("https://ipapi.co/json")
+      .then(response => {
+        if (response.ok) {
+          return response.json().then(data => {
+            resolve({ latitude: data.latitude, longitude: data.longitude });
+          });
+        } else {
+          reject(response.statusText);
+        }
+      })
+      .catch(err => {
+        reject(err);
+      });
+  };
   return new Promise<Coordinates>((resolve, reject) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -23,25 +41,16 @@ export const getLocation = () => {
           resolve({ latitude: location.coords.latitude, longitude: location.coords.longitude });
         },
         error => {
-          fetch('https://api.ipgeolocationapi.com/geolocate')
-            .then(response => {
-              if (response.ok) {
-                return response.json().then(data => {
-                  resolve({ latitude: data.geo.latitude, longitude: data.geo.longitude });
-                });
-              } else {
-                reject(response.statusText);
-              }
-            })
-            .catch(err => {
-              reject(err);
-            });
+          getIPLocation(resolve, reject);
         }
       );
+    } else {
+      getIPLocation(resolve, reject);
     }
   });
 };
 
+/** Calculate prayer times using Adhan.js library */
 export const getPrayerTimes = (parameters: {
   coords: Coordinates;
   calcMethod: string;
@@ -54,29 +63,29 @@ export const getPrayerTimes = (parameters: {
   );
   const date = new Date();
   let params: any;
-  // Calculation method
+  // Calculation method; refer https://github.com/batoulapps/adhan-js#calculation-parameters
   const method = parameters.calcMethod;
   switch (method) {
-    case 'karachi':
+    case "karachi":
       params = adhan.CalculationMethod.Karachi();
       break;
-    case 'mwl':
+    case "mwl":
       params = adhan.CalculationMethod.MuslimWorldLeague();
       break;
-    case 'egypt':
+    case "egypt":
       params = adhan.CalculationMethod.Egyptian();
       break;
-    case 'makkah':
+    case "makkah":
       params = adhan.CalculationMethod.UmmAlQura();
       break;
-    case 'kuwait':
+    case "kuwait":
       params = adhan.CalculationMethod.Kuwait();
       break;
-    case 'america':
+    case "america":
       params = adhan.CalculationMethod.NorthAmerica();
       break;
   }
-  //Asr method
+  // Asr method; Shafi has early Asrs, while Hanafi delays Asr time
   const lateAsr = parameters.lateAsr;
   switch (lateAsr) {
     case true:
@@ -86,7 +95,7 @@ export const getPrayerTimes = (parameters: {
       params.madhab = adhan.Madhab.Shafi;
       break;
   }
-
+  // For regions in higher latitudes
   params.highLatitudeRule = adhan.HighLatitudeRule.TwilightAngle;
 
   const prayerTimes = new adhan.PrayerTimes(coordinates, date, params);
@@ -101,6 +110,7 @@ export const getPrayerTimes = (parameters: {
   return formattedTimes;
 };
 
+/** Determines the next prayer time by comparing unix timestamps */
 export const determineNextWaqt = (parameters: {
   formattedTimes: PrayerTimes;
   timeFormat: string;
@@ -114,30 +124,33 @@ export const determineNextWaqt = (parameters: {
   const unixMaghrib = moment(parameters.formattedTimes.maghrib, parameters.timeFormat).unix();
   const unixIsha = moment(parameters.formattedTimes.isha, parameters.timeFormat).unix();
 
-  let nextWaqt;
-  let timeToNextWaqt;
+  var nextWaqt: string;
+  var timeToNextWaqt: string;
 
   if (unixNow < unixFajr) {
-    nextWaqt = 'Fajr';
+    nextWaqt = "Fajr";
     timeToNextWaqt = moment.unix(unixFajr).fromNow();
   } else if (unixNow < unixSunrise && unixNow > unixFajr) {
-    nextWaqt = 'Sunrise';
+    nextWaqt = "Sunrise";
     timeToNextWaqt = moment.unix(unixSunrise).fromNow();
   } else if (unixNow < unixDhuhr && unixNow > unixSunrise) {
-    nextWaqt = 'Dhuhr';
+    nextWaqt = "Dhuhr";
     timeToNextWaqt = moment.unix(unixDhuhr).fromNow();
   } else if (unixNow < unixAsr && unixNow > unixDhuhr) {
-    nextWaqt = 'Asr';
+    nextWaqt = "Asr";
     timeToNextWaqt = moment.unix(unixAsr).fromNow();
   } else if (unixNow < unixMaghrib && unixNow > unixAsr) {
-    nextWaqt = 'Maghrib';
+    nextWaqt = "Maghrib";
     timeToNextWaqt = moment.unix(unixMaghrib).fromNow();
   } else if (unixNow < unixIsha && unixNow > unixMaghrib) {
-    nextWaqt = 'Isha';
+    nextWaqt = "Isha";
     timeToNextWaqt = moment.unix(unixIsha).fromNow();
   } else if (unixNow > unixIsha) {
-    nextWaqt = 'Fajr';
-    timeToNextWaqt = 'tomorrow';
+    nextWaqt = "Fajr";
+    timeToNextWaqt = "tomorrow";
+  } else {
+    nextWaqt = "";
+    timeToNextWaqt = "";
   }
 
   return {
@@ -146,32 +159,34 @@ export const determineNextWaqt = (parameters: {
   };
 };
 
+/** Returns timezone and localtime */
 export const getTimezoneAndLocaltime = () => {
   return {
     timeZone:
-      'GMT ' +
+      "GMT " +
       moment()
         .parseZone()
-        .format('Z'),
-    localTime: moment().format('Do MMMM YYYY')
+        .format("Z"),
+    localTime: moment().format("Do MMMM YYYY")
   };
 };
 
+/** Rough determination of calcMethod from timezone */
 export const determineCalcMethod = () => {
   const timeZone = parseInt(
     moment()
       .parseZone()
-      .format('Z')
+      .format("Z")
   );
   if (timeZone >= 0 && timeZone <= 2) {
-    return 'mwl';
+    return "mwl";
   } else if (timeZone >= 3 && timeZone <= 4) {
-    return 'makkah';
+    return "makkah";
   } else if (timeZone >= 5 && timeZone <= 7) {
-    return 'karachi';
+    return "karachi";
   } else if (timeZone >= 8 && timeZone <= 12) {
-    return 'mwl';
+    return "mwl";
   } else {
-    return 'mwl';
+    return "mwl";
   }
 };
