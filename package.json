@@ -35,6 +35,15 @@
       "prettier"
     ]
   },
+  "prettier": {
+    "useTabs": false,
+    "tabWidth": 2,
+    "semi": true,
+    "singleQuote": false,
+    "jsxSingleQuote": false,
+    "printWidth": 100,
+    "bracketSpacing": true
+  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -48,8 +57,11 @@
     ]
   },
   "devDependencies": {
+    "@types/enzyme": "^3.9.4",
+    "@types/enzyme-adapter-react-16": "^1.0.5",
+    "enzyme": "^3.10.0",
+    "enzyme-adapter-react-16": "^1.14.0",
     "eslint-plugin-prettier": "^3.0.1",
-    "node-sass": "^4.12.0",
     "prettier": "^1.17.0"
   }
 }

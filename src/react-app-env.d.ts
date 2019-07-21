@@ -1,2 +1,2 @@
 /// <reference types="react-scripts" />
-declare module 'adhan';
+declare module "adhan";

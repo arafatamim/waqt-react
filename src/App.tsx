@@ -1,43 +1,40 @@
-import React from 'react';
+import React from "react";
 
-import Headerbox from './components/Headerbox';
-import Settings, { SettingsObject } from './components/Settings';
-import Snackbar from './components/Snackbar';
-import TimeBox from './components/TimeBox';
-import * as functions from './utils';
+import Headerbox from "./components/Headerbox";
+import Settings, { SettingsObject, TimeFormat } from "./components/Settings";
+import Snackbar from "./components/Snackbar";
+import TimeBox from "./components/TimeBox";
+import * as functions from "./utils";
 
-import { Global } from '@emotion/core';
-import styled from '@emotion/styled';
+import { Global } from "@emotion/core";
+import styled from "@emotion/styled";
 
-const rowHeight: string = '210px';
-const TimeBoxContainer = styled('div')({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 33.3%)',
+const rowHeight: string = "210px";
+const TimeBoxContainer = styled("div")({
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 33.3%)",
   gridTemplateRows: `repeat(2, ${rowHeight})`,
   // gridTemplateRows: 'auto',
-  '@media (max-width: 800px)': {
-    gridTemplateColumns: 'repeat(2, 1fr)',
+  "@media (max-width: 800px)": {
+    gridTemplateColumns: "repeat(2, 1fr)",
     gridTemplateRows: `repeat(3, ${rowHeight})`
   },
-  '@media (max-width: 575px)': {
-    gridTemplateColumns: '1fr',
+  "@media (max-width: 575px)": {
+    gridTemplateColumns: "1fr",
     gridTemplateRows: `repeat(6, ${rowHeight})`
   }
 });
-const BossContainer = styled('div')({
-  '@media (min-width: 825px)': {
-    padding: '3% 5%',
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: '80%'
+const BossContainer = styled("div")({
+  "@media (min-width: 825px)": {
+    padding: "3% 5%",
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: "80%"
   }
 });
-enum TimeFormat {
-  Metric = 'h:mm A',
-  Imperial = 'HH:mm'
-}
+
 interface AppState {
   fajr: string;
   sunrise: string;
@@ -57,20 +54,20 @@ interface AppState {
 }
 class App extends React.Component {
   state: AppState = {
-    fajr: '...',
-    sunrise: '...',
-    dhuhr: '...',
-    asr: '...',
-    maghrib: '...',
-    isha: '...',
+    fajr: "...",
+    sunrise: "...",
+    dhuhr: "...",
+    asr: "...",
+    maghrib: "...",
+    isha: "...",
     timeFormat: TimeFormat.Metric,
-    calcMethod: 'karachi',
+    calcMethod: "karachi",
     lateAsr: false,
-    nextWaqt: '',
-    timeToNextWaqt: '',
+    nextWaqt: "",
+    timeToNextWaqt: "",
     settingsDialog: false,
-    localTime: '',
-    timeZone: '',
+    localTime: "",
+    timeZone: "",
     snackbar: false
   };
 
@@ -80,9 +77,9 @@ class App extends React.Component {
         <Global
           styles={{
             body: {
-              backgroundColor: '#222',
-              userSelect: 'none',
-              WebkitTapHighlightColor: 'transparent'
+              backgroundColor: "#222",
+              userSelect: "none",
+              WebkitTapHighlightColor: "transparent"
             }
           }}
         />
@@ -91,12 +88,13 @@ class App extends React.Component {
             params={this.settingsParameters()}
             toggleDialog={this.toggleDialog}
             updateSettings={this.updateSettings}
+            repoURL="https://github.com/arafatamim/waqt-react"
           />
         )}
         <BossContainer>
           <Headerbox toggleDialog={this.toggleDialog} />
           <TimeBoxContainer>
-            {['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((val, i) => (
+            {["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"].map((val, i) => (
               <TimeBox
                 waqtName={val}
                 waqtTime={this.state[val.toLowerCase()]}
@@ -105,12 +103,6 @@ class App extends React.Component {
                 key={`waqt-${i}`}
               />
             ))}
-            {/* <TimeBox
-                waqtName="Fajr"
-                waqtTime={this.state.fajr}
-                timeToNextWaqt={this.state.timeToNextWaqt}
-                activeWaqt={this.state.nextWaqt === 'Fajr'}
-              /> */}
           </TimeBoxContainer>
           {this.state.snackbar && <Snackbar reloadTimes={this.reloadTimes} />}
         </BossContainer>
@@ -118,8 +110,8 @@ class App extends React.Component {
     );
   }
   componentDidMount() {
-    if (localStorage.getItem('settings')) {
-      const settingsStore: SettingsObject = JSON.parse(localStorage.getItem('settings')!);
+    if (localStorage.getItem("settings")) {
+      const settingsStore: SettingsObject = JSON.parse(localStorage.getItem("settings")!);
       this.setState({
         calcMethod: settingsStore.calcMethod,
         timeFormat: settingsStore.timeFormat,
@@ -127,7 +119,7 @@ class App extends React.Component {
       } as SettingsObject);
     } else {
       this.setState({
-        timeFormat: 'h:mm A',
+        timeFormat: "h:mm A",
         calcMethod: functions.determineCalcMethod(),
         lateAsr: false
       } as SettingsObject);
@@ -147,7 +139,7 @@ class App extends React.Component {
       calcMethod: settingsObj.calcMethod,
       lateAsr: settingsObj.lateAsr
     } as SettingsObject);
-    localStorage.setItem('settings', JSON.stringify(settingsObj));
+    localStorage.setItem("settings", JSON.stringify(settingsObj));
     this.toggleDialog();
     this.setTimes();
   };
